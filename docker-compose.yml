@@ -1,0 +1,16 @@
+services:
+  normativa-api:
+    build:
+      context: ./app
+    container_name: normativa-api
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s

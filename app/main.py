@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel, Field
 
 DATABASE_PATH = Path("/data/registros.db")
@@ -51,6 +51,10 @@ class Record(BaseModel):
     fecha: datetime
 
 
+class RecordExists(BaseModel):
+    exists: bool
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -75,3 +79,16 @@ def list_records() -> list[Record]:
             "SELECT id, usuario, version, fecha FROM records ORDER BY id ASC"
         ).fetchall()
     return [Record(**dict(row)) for row in rows]
+
+
+@app.get("/records/exists", response_model=RecordExists)
+def record_exists(
+    usuario: str = Query(min_length=1, max_length=255),
+    version: str = Query(min_length=1, max_length=255),
+) -> RecordExists:
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT EXISTS(SELECT 1 FROM records WHERE usuario = ? AND version = ?) AS result",
+            (usuario, version),
+        ).fetchone()
+    return RecordExists(exists=bool(row["result"]))
